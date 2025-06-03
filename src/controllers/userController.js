@@ -4,15 +4,19 @@ import jwt from "jsonwebtoken";
 
 // Cadastro de Usuario
 const registerUser = async (request, response) => {
+  // Desestruturação de objeto
   const { nome, email, senha } = request.body;
 
+// Adicionei uma verificação no registerUser para impedir cadastro de e-mails duplicados:
   const existingUser = await supabase.from("users").select("id").eq("email", email).single();
   if (existingUser.data) {
     return response.status(400).json({ mensagem: "Email já cadastrado." });
   }
 
+  // Cria um Hash pra senha criada
   const passwordHashed = await bcrypt.hash(senha, 10);
 
+  // Abre conexão com o SupaBase
   const { data, error } = await supabase.from("users").insert([
     { nome, email, senha: passwordHashed }
   ]);
@@ -28,6 +32,7 @@ const registerUser = async (request, response) => {
 const authentication = async (request, response) => {
   const { email, senha } = request.body;
 
+  // Abre conexão com o Supabase (Tabela Users)
   const { data: user, error } = await supabase.from("users")
     .select("*")
     .eq("email", email)
@@ -69,7 +74,9 @@ const updateUser = async (request, response) => {
     ...(senha && { senha: await bcrypt.hash(senha, 10) })
   };
 
-  const { error } = await supabase.from("users").update(dataUpdated).eq("id", id);
+  const { error } = await supabase.from("users")
+    .update(dataUpdated)
+    .eq("id", id);
 
   if (error) {
     return response.status(500).json({ error: "erro:", error });
@@ -82,14 +89,13 @@ const updateUser = async (request, response) => {
 const deleteUser = async (request, response) => {
   const { id } = request.params;
 
-  const { error } = await supabase.from("users").delete()
-  .eq("id", id);
+  const { error } = await supabase.from("users").delete().eq("id", id);
 
   if (error) {
-    return response.status(500).json({ mensagem: "Erro ao excluir o usuário", error });
+    return response.status(500).json({ error: "Erro:", error });
   }
 
-  response.json({ mensagem: "Usuário excluído com sucesso" });
+  response.status(200).json({ mensagem: "Usuário excluído com sucesso" });
 };
 
-export { registerUser, authentication, listUsers, updateUser, deleteUser };
+export default { registerUser, authentication, listUsers, updateUser, deleteUser };
